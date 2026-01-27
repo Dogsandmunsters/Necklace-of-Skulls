@@ -1,0 +1,16 @@
+{
+    "name": "Necklace of Skulls",
+    "short_name": "Necklace",
+    "description": "An interactive gamebook adventure in the Mayan world",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#1a3a2f",
+    "theme_color": "#1a3a2f",
+    "icons": [
+        {
+            "src": "images/cover.jpg",
+            "sizes": "512x512",
+            "type": "image/jpeg"
+        }
+    ]
+}
