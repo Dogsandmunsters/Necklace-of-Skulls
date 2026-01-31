@@ -16966,6 +16966,7 @@ var Game = {
     },
 
     vars: [],
+    shopPurchases: {},
     currentSection: 'sect_1',
     previousMoney: 10,
     previousLife: 10,
@@ -17011,6 +17012,7 @@ var Game = {
         this.vars[this.VAR.money] = 10;
         this.vars[this.VAR.life_points] = 10;
         this.vars[this.VAR.life_points_max] = 10;
+        this.shopPurchases = {};
         this.currentSection = 'sect_1';
         this.previousMoney = 10;
         this.previousLife = 10;
@@ -17068,7 +17070,8 @@ var Game = {
     saveGame: function() {
         var data = {
             vars: this.vars,
-            section: this.currentSection
+            section: this.currentSection,
+            shopPurchases: this.shopPurchases
         };
         localStorage.setItem('nos_save', JSON.stringify(data));
     },
@@ -17080,6 +17083,7 @@ var Game = {
                 var data = JSON.parse(saved);
                 this.vars = data.vars;
                 this.currentSection = data.section;
+                this.shopPurchases = data.shopPurchases || {};
                 this.previousMoney = this.vars[this.VAR.money];
                 this.previousLife = this.vars[this.VAR.life_points];
             } catch (e) {
@@ -17151,18 +17155,28 @@ var Game = {
         this.updateHeader();
     },
 
+    getShopPurchaseKey: function(sectionId, itemVar) {
+        return sectionId + '_' + itemVar;
+    },
+
     buyItem: function(shopId) {
         var shop = SHOP_ITEMS[shopId];
         if (!shop) return;
         
         var itemVar = this.VAR[shop.var];
-        if (this.vars[this.VAR.money] >= shop.price && this.vars[itemVar] === 0) {
-            this.vars[this.VAR.money] -= shop.price;
-            this.vars[itemVar] = 1;
-            this.playSound('money');
-            this.saveGame();
-            this.displaySection(this.currentSection);
-        }
+        var purchaseKey = this.getShopPurchaseKey(this.currentSection, shop.var);
+        
+        if (this.shopPurchases[purchaseKey]) return;
+        
+        if (this.vars[this.VAR.money] < shop.price) return;
+        
+        this.vars[this.VAR.money] -= shop.price;
+        this.vars[itemVar] = (this.vars[itemVar] || 0) + 1;
+        this.shopPurchases[purchaseKey] = true;
+        
+        this.playSound('money');
+        this.saveGame();
+        this.displaySection(this.currentSection);
     },
 
     useMagicDrink: function() {
@@ -17194,6 +17208,12 @@ var Game = {
             }
         }
         return false;
+    },
+
+    isShopStatusText: function(text) {
+        // Check if this text piece is a shop status message we handle ourselves
+        return text.indexOf('out of stock') !== -1 || 
+               text.indexOf("haven't enough money") !== -1;
     },
 
     getPieceSortKey: function(pieceId) {
@@ -17266,7 +17286,13 @@ var Game = {
         for (var i = 0; i < pieces.length; i++) {
             var piece = pieces[i];
             
-            if (this.isPieceHidden(piece.piece, hidepieces)) continue;
+            // Skip shop status text pieces - we handle that ourselves
+            if (piece.type === 'text' && this.isShopStatusText(piece.text)) {
+                continue;
+            }
+            
+            // Don't apply hidepieces to shop items - we handle their display ourselves
+            if (piece.type !== 'shop' && this.isPieceHidden(piece.piece, hidepieces)) continue;
             
             if (piece.type === 'text') {
                 var span = document.createElement('span');
@@ -17284,11 +17310,11 @@ var Game = {
             } else if (piece.type === 'shop') {
                 var shop = SHOP_ITEMS[piece.shop_id];
                 if (shop) {
-                    var itemVar = this.VAR[shop.var];
-                    var hasItem = this.vars[itemVar] > 0;
+                    var purchaseKey = this.getShopPurchaseKey(sectionId, shop.var);
+                    var boughtHere = this.shopPurchases[purchaseKey] === true;
                     var canAfford = this.vars[this.VAR.money] >= shop.price;
                     
-                    if (hasItem) {
+                    if (boughtHere) {
                         var div = document.createElement('div');
                         div.className = 'shop-unavailable';
                         div.textContent = shop.name + ' - out of stock';
@@ -17394,7 +17420,6 @@ var Game = {
     setupEventListeners: function() {
         var self = this;
         
-        // Title screen buttons
         document.getElementById('btn-new-game').onclick = function() {
             self.startNewGame();
         };
