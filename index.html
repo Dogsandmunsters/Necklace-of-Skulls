@@ -13372,6 +13372,7 @@ if(s=="sect_129")
 if(i!=0){
 life(-2);
 vars[V.life_points_max]-=2;
+if(vars[V.life_points]>vars[V.life_points_max]){vars[V.life_points]=vars[V.life_points_max];}
 if(vars[V.life_points]>0)
 {
 auto="129a";
@@ -16039,7 +16040,7 @@ vars[V.money]-=5
 }
 if(s=="sect_324")
 {
-	if(!((vars[V.magic_drink]==1)&&(vars[V.life_points]<vars[V.life_points_max]))) hidepiece("324_0");
+	if(!((vars[V.magic_drink]>0)&&(vars[V.life_points]<vars[V.life_points_max]))) hidepiece("324_0");
 	if(!((vars[V.life_points]<vars[V.life_points_max])&&(vars[V.wilderness_lore]==1))) hidepiece("324_1");
 	if(!((vars[V.life_points]<vars[V.life_points_max])&&(vars[V.wilderness_lore]==0))) hidepiece("324_2");
 	if(!(vars[V.life_points]==vars[V.life_points_max])) hidepiece("324_3");
@@ -17166,12 +17167,18 @@ var Game = {
         var itemVar = this.VAR[shop.var];
         var purchaseKey = this.getShopPurchaseKey(this.currentSection, shop.var);
         
+        // Check if bought from THIS shop already
         if (this.shopPurchases[purchaseKey]) return;
         
+        // Check if already have the item (from another shop)
+        if (this.vars[itemVar] > 0) return;
+        
+        // Check if can afford
         if (this.vars[this.VAR.money] < shop.price) return;
         
+        // Buy the item (set to 1, not increment)
         this.vars[this.VAR.money] -= shop.price;
-        this.vars[itemVar] = (this.vars[itemVar] || 0) + 1;
+        this.vars[itemVar] = 1;
         this.shopPurchases[purchaseKey] = true;
         
         this.playSound('money');
@@ -17211,7 +17218,6 @@ var Game = {
     },
 
     isShopStatusText: function(text) {
-        // Check if this text piece is a shop status message we handle ourselves
         return text.indexOf('out of stock') !== -1 || 
                text.indexOf("haven't enough money") !== -1;
     },
@@ -17310,21 +17316,32 @@ var Game = {
             } else if (piece.type === 'shop') {
                 var shop = SHOP_ITEMS[piece.shop_id];
                 if (shop) {
+                    var itemVar = this.VAR[shop.var];
                     var purchaseKey = this.getShopPurchaseKey(sectionId, shop.var);
                     var boughtHere = this.shopPurchases[purchaseKey] === true;
+                    var hasItem = this.vars[itemVar] > 0;
                     var canAfford = this.vars[this.VAR.money] >= shop.price;
                     
                     if (boughtHere) {
+                        // Bought from THIS shop - show out of stock
                         var div = document.createElement('div');
                         div.className = 'shop-unavailable';
                         div.textContent = shop.name + ' - out of stock';
                         optionsDiv.appendChild(div);
+                    } else if (hasItem) {
+                        // Already have item (bought elsewhere) - show "already have one"
+                        var div = document.createElement('div');
+                        div.className = 'shop-unavailable';
+                        div.textContent = shop.name + ' - you already have one';
+                        optionsDiv.appendChild(div);
                     } else if (!canAfford) {
+                        // Can't afford
                         var div = document.createElement('div');
                         div.className = 'shop-unavailable';
                         div.textContent = shop.name + " - you haven't enough money";
                         optionsDiv.appendChild(div);
                     } else {
+                        // Can buy
                         var btn = document.createElement('button');
                         btn.className = 'option-btn shop-btn';
                         btn.innerHTML = '<span>' + shop.name + '</span><span class="shop-price">' + shop.price + ' cacao</span>';
