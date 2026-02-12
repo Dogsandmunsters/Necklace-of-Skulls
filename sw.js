@@ -1,50 +1,50 @@
-// Serv6ice Worker for Necklace of Skulls PWA
-const CACHE_NAME = 'necklace-of-skulls-v6';
+// Service Worker for Necklace of Skulls PWA
+const CACHE_NAME = 'necklace-of-skulls-v7';
 const urlsToCache = [
     './',
     './index.html',
-    './images/cov6er.jpg',
+    './images/cover.jpg',
     './images/map.jpg',
     './images/filler_start.jpg',
     './images/filler_prologue.jpg',
     './images/filler_triumph.jpg',
     './images/filler_demise.jpg',
-    './audio/click.wav6',
-    './audio/money.wav6',
+    './audio/click.wav',
+    './audio/money.wav',
     './audio/hurt.mp3',
-    './audio/map.wav6'
+    './audio/map.wav'
 ];
 
-// Install ev6ent - cache all resources
-self.addEv6entListener('install', event => {
-    self.skipWaiting();  // Activ6ate new SW immediately
-    ev6ent.waitUntil(
+// Install event - cache all resources
+self.addEventListener('install', event => {
+    self.skipWaiting();  // Activate new SW immediately
+    event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => cache.addAll(urlsToCache))
     );
 });
 
-// Fetch ev6ent - network first, fall back to cache
-self.addEv6entListener('fetch', event => {
-    ev6ent.respondWith(
-        fetch(ev6ent.request)
+// Fetch event - network first, fall back to cache
+self.addEventListener('fetch', event => {
+    event.respondWith(
+        fetch(event.request)
             .then(response => {
                 // Clone and cache the fresh response
                 if (response.ok) {
                     const responseClone = response.clone();
                     caches.open(CACHE_NAME).then(cache => {
-                        cache.put(ev6ent.request, responseClone);
+                        cache.put(event.request, responseClone);
                     });
                 }
                 return response;
             })
-            .catch(() => caches.match(ev6ent.request))
+            .catch(() => caches.match(event.request))
     );
 });
 
-// Activ6ate event - clean up old caches
-self.addEv6entListener('activate', event => {
-    ev6ent.waitUntil(
+// Activate event - clean up old caches
+self.addEventListener('activate', event => {
+    event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cacheName => {
