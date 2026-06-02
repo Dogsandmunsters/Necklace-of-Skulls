@@ -5007,7 +5007,13 @@ var SECTIONS = {
       {
         "piece": "156a_0",
         "type": "navigate",
-        "target": "sect_226",
+        "target": "sect_203",
+        "text": "Continue."
+      },
+      {
+        "piece": "156a_1",
+        "type": "navigate",
+        "target": "sect_179",
         "text": "Continue."
       }
     ]
@@ -13636,6 +13642,8 @@ if(s=="sect_156a")
 if(i!=0){
 vars[V.ballgame_score]++
 }
+	if(!(vars[V.shade]==1)) hidepiece("156a_0");
+	if(!(vars[V.shade]==0)) hidepiece("156a_1");
 }
 if(s=="sect_156b")
 {
