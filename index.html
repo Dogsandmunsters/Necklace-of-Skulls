@@ -299,51 +299,33 @@ em {
     font-style: italic;
 }
 
-/* Death Overlay */
-#death-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.9);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.death-content {
-    position: relative;
+/* Ending block (death or victory) */
+.ending-block {
+    margin-top: 16px;
+    padding: 24px;
     text-align: center;
-    max-width: 600px;
-    padding: 40px;
+    background: linear-gradient(to bottom, var(--jungle-green-light), var(--jungle-green));
+    border: 2px solid var(--gold);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px var(--shadow);
 }
 
-.death-bg {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    max-width: 100%;
-    max-height: 80vh;
-    opacity: 0.25;
-    z-index: -1;
-}
-
-.death-text h2 {
+.ending-block h2 {
     font-family: 'Cinzel', serif;
-    font-size: 42px;
+    font-size: 32px;
     color: var(--deep-red-light);
-    text-shadow: 3px 3px 6px black;
-    margin-bottom: 16px;
+    text-shadow: 2px 2px 4px black;
+    margin-bottom: 12px;
 }
 
-.death-text p {
-    font-size: 22px;
+.ending-block.victory h2 {
+    color: var(--gold-light);
+}
+
+.ending-block p {
+    font-size: 20px;
     color: var(--parchment);
-    margin-bottom: 32px;
-    text-shadow: 2px 2px 4px black;
+    margin-bottom: 20px;
 }
 
 /* Modals */
@@ -575,11 +557,11 @@ em {
         font-size: 16px;
     }
 
-    .death-text h2 {
-        font-size: 32px;
+    .ending-block h2 {
+        font-size: 26px;
     }
 
-    .death-text p {
+    .ending-block p {
         font-size: 18px;
     }
 }
@@ -772,18 +754,6 @@ em {
             <div id="section-options"></div>
         </div>
     </main>
-
-    <!-- Death Overlay -->
-    <div id="death-overlay" class="overlay" style="display: none;">
-        <div class="death-content">
-            <img src="images/filler_demise.jpg" alt="" class="death-bg">
-            <div class="death-text">
-                <h2>YOU HAVE DIED</h2>
-                <p>Your adventure has come to an end...</p>
-                <button id="btn-try-again" class="action-btn">Try Again</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Character Sheet Modal -->
     <div id="character-modal" class="modal" style="display: none;">
@@ -14089,6 +14059,7 @@ auto="195b";
 if(s=="sect_196")
 {
 if(i!=0){
+game.shopPurchases={};
 vars[V.amulet]=0;
 vars[V.blowgun]=0;
 vars[V.chalice_of_life]=0;
@@ -15715,18 +15686,19 @@ auto="295c";
 if(s=="sect_296")
 {
 if(i!=0){
-vars[V.life_points]-=9;if((vars[V.swordplay]==1)&&((vars[V.sword]==1)||(vars[V.jade_sword]==1)))
+var damage=9;if((vars[V.swordplay]==1)&&((vars[V.sword]==1)||(vars[V.jade_sword]==1)))
 {
-life(2);
+damage-=2;
 }
 if((vars[V.charms]==1)&&(vars[V.amulet]==1))
 {
-life(2);
+damage-=2;
 }
 if(vars[V.unarmed_combat]==1)
 {
-life(2);
+damage-=2;
 }
+life(-damage);
 if(vars[V.life_points]>0)
 {
 auto="296a";
@@ -16965,6 +16937,9 @@ var Game = {
     },
 
     showTitleScreen: function() {
+        var hasSave = false;
+        try { hasSave = localStorage.getItem('nos_save') !== null; } catch (e) {}
+        document.getElementById('btn-resume-game').style.display = hasSave ? '' : 'none';
         document.getElementById('title-screen').style.display = 'flex';
         document.getElementById('game-header').style.display = 'none';
         document.getElementById('game-content').style.display = 'none';
@@ -17048,7 +17023,6 @@ var Game = {
     resetGame: function() {
         this.resetGameState();
         this.saveGame();
-        document.getElementById('death-overlay').style.display = 'none';
         this.displaySection('sect_1');
     },
 
@@ -17110,11 +17084,9 @@ var Game = {
             }
         }
         
-        if (this.vars[this.VAR.life_points] <= 0) {
-            this.showDeathScreen();
-            return;
-        }
-        
+        // A section reached with zero Life Points is an ending: it is shown
+        // like any other paragraph, with the ending block appended by
+        // displaySection, and saved so a resume lands on the ending too.
         this.checkStateChanges();
         this.saveGame();
         this.displaySection(sectionId);
@@ -17135,9 +17107,22 @@ var Game = {
         this.previousLife = currentLife;
     },
 
-    showDeathScreen: function() {
-        document.getElementById('death-overlay').style.display = 'flex';
-        this.updateHeader();
+    appendEndingBlock: function(container, isVictory) {
+        var self = this;
+        var block = document.createElement('div');
+        block.className = 'ending-block' + (isVictory ? ' victory' : '');
+        var heading = document.createElement('h2');
+        heading.textContent = isVictory ? 'YOUR QUEST IS COMPLETE' : 'YOU HAVE DIED';
+        var para = document.createElement('p');
+        para.textContent = isVictory ? 'You have triumphed over Necklace of Skulls.' : 'Your adventure has come to an end...';
+        var btn = document.createElement('button');
+        btn.className = 'action-btn';
+        btn.textContent = 'Play again';
+        btn.onclick = function() { self.playSound('click'); self.resetGame(); };
+        block.appendChild(heading);
+        block.appendChild(para);
+        block.appendChild(btn);
+        container.appendChild(block);
     },
 
     getShopPurchaseKey: function(sectionId, itemVar) {
@@ -17338,10 +17323,13 @@ var Game = {
             }
         }
         
-        if (section.is_victory) {
+        var isDead = this.vars[this.VAR.life_points] <= 0;
+        if (section.is_victory && !isDead) {
             textDiv.innerHTML += '<img src="images/filler_triumph.jpg" alt="" class="ending-image">';
-        } else if (section.is_failure) {
+            this.appendEndingBlock(optionsDiv, true);
+        } else if (section.is_failure || isDead) {
             textDiv.innerHTML += '<img src="images/filler_demise.jpg" alt="" class="ending-image">';
+            this.appendEndingBlock(optionsDiv, false);
         }
         
         document.getElementById('game-content').scrollTop = 0;
@@ -17461,10 +17449,6 @@ var Game = {
         };
         document.getElementById('confirm-reset').onclick = function() {
             document.getElementById('reset-modal').style.display = 'none';
-            self.resetGame();
-        };
-        
-        document.getElementById('btn-try-again').onclick = function() {
             self.resetGame();
         };
         
