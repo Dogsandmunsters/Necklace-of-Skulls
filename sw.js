@@ -1,5 +1,5 @@
 // Service Worker for Necklace of Skulls PWA
-const CACHE_NAME = 'necklace-of-skulls-v7';
+const CACHE_NAME = 'necklace-of-skulls-v8';
 const urlsToCache = [
     './',
     './index.html',
